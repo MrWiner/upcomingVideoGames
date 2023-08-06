@@ -21,6 +21,7 @@ class nintendoSwitch {
           .text()
           .trim();
         const releaseDate = moment(releaseDateStr, 'MMMM D, YYYY');
+        const clickLink = $(element).attr('href');
 
         if (
           releaseDate.isSameOrAfter(nowDate) &&
@@ -29,6 +30,7 @@ class nintendoSwitch {
           gameTitles.push({
             title,
             releaseDate: releaseDate.format('MMMM D, YYYY'),
+            link: clickLink,
           });
         }
       });
