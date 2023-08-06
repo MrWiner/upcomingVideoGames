@@ -12,7 +12,7 @@ class nintendoSwitch {
       const gameTitles = [];
       const nowDate = moment();
 
-      $('.clamp-list .title').each((index, element) => {
+      for (const element of $('.clamp-list .title')) {
         const title = $(element).find('h3').text().trim();
         const releaseDateStr = $(element)
           .next('.clamp-details')
@@ -27,13 +27,31 @@ class nintendoSwitch {
           releaseDate.isSameOrAfter(nowDate) &&
           releaseDate.isBefore(nowDate.clone().add(nextDays, 'days'))
         ) {
+          const productMetacriticURL =
+            'https://www.metacritic.com/' + clickLink;
+
+          const productResponse = await axios.get(productMetacriticURL);
+          const product$ = cheerio.load(productResponse.data);
+
+          const publisher = product$('.summary_detail.publisher .data a')
+            .text()
+            .trim();
+
+          const alsoOnPlatforms = product$(
+            '.summary_detail.product_platforms .data a'
+          )
+            .map((i, el) => product$(el).text().trim())
+            .get();
+
           gameTitles.push({
             title,
             releaseDate: releaseDate.format('MMMM D, YYYY'),
             link: clickLink,
+            publisher: publisher,
+            alsoOnPlatforms: alsoOnPlatforms,
           });
         }
-      });
+      }
 
       return gameTitles;
     } catch (err) {
