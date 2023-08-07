@@ -5,8 +5,6 @@ const moment = require('moment');
 require('dotenv').config();
 const EventEmitter = require('events');
 
-process.setMaxListeners(100);
-
 class nintendoSwitch {
   static async nintendoWebsite(title) {
     const browser = await puppeteer.launch({
@@ -101,6 +99,7 @@ class nintendoSwitch {
 
   static async getNintendoGames(nextDays) {
     try {
+      console.log('hey');
       const metacriticURL =
         'https://www.metacritic.com/browse/games/release-date/coming-soon/switch/date';
       const response = await axios.get(metacriticURL);
