@@ -24,6 +24,8 @@ class NintendoSwitch {
       await searchInput.type(title);
       await searchInput.press('Enter');
 
+      await page.waitForTimeout(1000);
+
       await page.waitForSelector('[class^="BasicTilestyles__Tile-sc-"]');
 
       const nintendoLink = await page.evaluate((title) => {
@@ -121,27 +123,74 @@ class NintendoSwitch {
             .map((i, el) => $(el).text().trim())
             .get();
 
-          const nintendoData = await this.nintendoWebsite(title);
-          const nintendoLink = nintendoData.url;
-          const regularPrice = nintendoData.price;
-
           gameTitles.push({
             title: title,
             releaseDate: releaseDate.format('MMMM D, YYYY'),
             metacriticLink: clickLink,
             publisher: publisher,
             alsoOnPlatforms: alsoOnPlatforms,
-            nintendoLink: nintendoLink,
-            regularPrice: regularPrice,
+            // nintendoLink: nintendoLink,
+            // regularPrice: regularPrice,
           });
         }
       }
 
-      return gameTitles;
+      const batches = this.createBatches(gameTitles, 10);
+
+      const processedTitleBatches = await Promise.all(
+        batches.map(async (batch) => {
+          return await this.processBatchOfTitles(batch);
+        })
+      );
+
+      for (let i = 0; i < processedTitleBatches.length; i++) {
+        const nintendoDataBatch = processedTitleBatches[i];
+        const batch = batches[i];
+
+        for (let j = 0; j < nintendoDataBatch.length; j++) {
+          const nintendoData = nintendoDataBatch[j];
+          const index = i * 10 + j;
+
+          batch[j].nintendoLink = nintendoData.nintendoLink;
+          batch[j].regularPrice = nintendoData.regularPrice;
+        }
+      }
+
+      return this.mergeBatches(batches);
     } catch (err) {
       console.log(err);
       return err;
     }
+  }
+
+  static createBatches(inputArray, batchSize) {
+    const batches = [];
+    const totalItems = inputArray.length;
+
+    for (let i = 0; i < totalItems; i += batchSize) {
+      batches.push(inputArray.slice(i, i + batchSize));
+    }
+
+    return batches;
+  }
+
+  static mergeBatches(batches) {
+    const mergedArray = [].concat(...batches);
+    return mergedArray;
+  }
+
+  static async processBatchOfTitles(titles) {
+    const promises = titles.map(async (title) => {
+      const nintendoData = await this.nintendoWebsite(title.title);
+      const nintendoLink = nintendoData.url;
+      const regularPrice = nintendoData.price;
+      return {
+        nintendoLink: nintendoLink,
+        regularPrice: regularPrice,
+      };
+    });
+
+    return await Promise.all(promises);
   }
 }
 
