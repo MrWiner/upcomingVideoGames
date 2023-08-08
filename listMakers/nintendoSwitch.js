@@ -1,13 +1,13 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const moment = require('moment');
-const { firefox } = require('playwright');
+const pw = require('playwright');
 
 class NintendoSwitch {
   static async nintendoWebsite(title) {
-    const browser = await firefox.launch({
-      headless: true, // Set this to false if you want to see the browser in action
-    });
+    const browser = await pw.chromium.connectOverCDP(
+      'wss://chrome.browserless.io?token=' + process.env.TOKEN
+    );
 
     let nintendoData = {};
     try {
