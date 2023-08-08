@@ -1,60 +1,46 @@
-const cheerio = require('cheerio');
-const puppeteer = require('puppeteer');
 const axios = require('axios');
+const cheerio = require('cheerio');
 const moment = require('moment');
-require('dotenv').config();
-const EventEmitter = require('events');
+const { firefox } = require('playwright');
 
-class nintendoSwitch {
+class NintendoSwitch {
   static async nintendoWebsite(title) {
-    const browser = await puppeteer.launch({
-      headless: 'new',
+    const browser = await firefox.launch({
+      headless: true, // Set this to false if you want to see the browser in action
     });
+
     let nintendoData = {};
     try {
-      const page = await browser.newPage();
+      const context = await browser.newContext();
+      const page = await context.newPage();
       await page.goto('https://www.nintendo.com');
-      const buttonElement = await page.waitForSelector(
-        '[class^="SearchInputstyles__Button-sc-"]'
-      );
-      await page.evaluate((element) => {
-        element.click();
-      }, buttonElement);
-      await page.waitForSelector(
-        '.AutoCompleteInputstyles__ActiveInput-sc-ax1lsj-1'
+
+      const searchInput = await page.waitForSelector(
+        '[class^="SearchInputstyles__RefContainer-sc-"]'
       );
 
-      await page.type(
-        '.AutoCompleteInputstyles__ActiveInput-sc-ax1lsj-1',
-        title
-      );
-      await page.keyboard.press('Enter');
+      await page.click('[class^="SearchInputstyles__RefContainer-sc-"]');
+      await page.waitForTimeout(1000);
+      await searchInput.type(title);
+      await searchInput.press('Enter');
 
-      await page.waitForNavigation({ waitUntil: 'networkidle0' });
+      await page.waitForSelector('[class^="BasicTilestyles__Tile-sc-"]');
 
-      // Get the current URL after search
-      const seachPageUrl = page.url();
-
-      await page.goto(seachPageUrl);
-
-      const nintendoURL = await page.evaluate((title) => {
-        const anchorElements = document.querySelectorAll(
-          'a.BasicTilestyles__Tile-sc-1bsju6x-1.XVRAb'
+      const nintendoLink = await page.evaluate((title) => {
+        const anchors = Array.from(
+          document.querySelectorAll('[class^="BasicTilestyles__Tile-sc-"]')
         );
-
-        for (const anchor of anchorElements) {
-          const gameName = anchor.getAttribute('aria-label');
-          if (gameName === title) {
-            return anchor.href;
-          }
-        }
-
-        return 'Not Found';
+        const anchor = anchors.find(
+          (a) =>
+            a.getAttribute('aria-label').toLowerCase() === title.toLowerCase()
+        );
+        return anchor ? anchor.href : 'Not Found';
       }, title);
 
-      if (nintendoURL != 'Not Found') {
-        nintendoData.url = nintendoURL;
-        await page.goto(nintendoURL);
+      if (nintendoLink !== 'Not Found') {
+        await page.goto(nintendoLink);
+
+        await page.waitForTimeout(500);
 
         const monthInput = await page.$('input[name="month"]');
         const dayInput = await page.$('input[name="day"]');
@@ -62,7 +48,7 @@ class nintendoSwitch {
         const submitButton = await page.$('button[name="submit"]');
 
         if (monthInput && dayInput && yearInput && submitButton) {
-          //Handle Age Verification
+          // Handle Age Verification
           await monthInput.type('12');
           await dayInput.type('15');
           await yearInput.type('1999');
@@ -72,28 +58,26 @@ class nintendoSwitch {
         const price = await page.waitForSelector(
           '[class^="Pricestyles__MSRP-sc-"]'
         );
-
-        const priceText = await price.evaluate((element) => {
-          return element.textContent
-            .trim()
-            .replace('Regular Price:', '')
-            .trim();
-        });
+        const priceText = await price.evaluate((element) =>
+          element.textContent.trim().replace('Regular Price:', '').trim()
+        );
 
         if (priceText) {
           nintendoData.price = priceText;
         } else {
           nintendoData.price = 'No Price Found';
         }
+        nintendoData.url = nintendoLink;
       } else {
-        nintendoData.url = nintendoURL;
+        nintendoData.url = 'Not Found';
       }
     } catch (err) {
       console.log(err);
       nintendoData.price = 'error';
       nintendoData.url = 'error';
+    } finally {
+      await browser.close();
     }
-    await browser.close();
     return nintendoData;
   }
 
@@ -124,7 +108,6 @@ class nintendoSwitch {
         ) {
           const productMetacriticURL =
             'https://www.metacritic.com/' + clickLink;
-
           const productResponse = await axios.get(productMetacriticURL);
           const product$ = cheerio.load(productResponse.data);
 
@@ -135,7 +118,7 @@ class nintendoSwitch {
           const alsoOnPlatforms = product$(
             '.summary_detail.product_platforms .data a'
           )
-            .map((i, el) => product$(el).text().trim())
+            .map((i, el) => $(el).text().trim())
             .get();
 
           const nintendoData = await this.nintendoWebsite(title);
@@ -162,4 +145,4 @@ class nintendoSwitch {
   }
 }
 
-module.exports = nintendoSwitch;
+module.exports = NintendoSwitch;
