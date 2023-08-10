@@ -18,7 +18,7 @@ const list = require('./routes/api/list');
 app.use('/api/list', list);
 
 async function main() {
-  const a = await nintendoSwitch.getNintendoGames(2);
+  const a = await nintendoSwitch.getNintendoGames(1);
   console.log(a);
 }
 main();

@@ -13,18 +13,11 @@ class NintendoSwitch {
     try {
       const context = await browser.newContext();
       const page = await context.newPage();
-      await page.goto('https://www.nintendo.com');
-
-      const searchInput = await page.waitForSelector(
-        '[class^="SearchInputstyles__RefContainer-sc-"]'
+      await page.goto(
+        'https://www.nintendo.com/search/#q=' +
+          title +
+          '&p=1&cat=gme&sort=df&f=corePlatforms&corePlatforms=Nintendo+Switch'
       );
-
-      await page.click('[class^="SearchInputstyles__RefContainer-sc-"]');
-      await page.waitForTimeout(1000);
-      await searchInput.type(title);
-      await searchInput.press('Enter');
-
-      await page.waitForTimeout(1000);
 
       await page.waitForSelector('[class^="BasicTilestyles__Tile-sc-"]');
 
