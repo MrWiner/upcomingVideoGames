@@ -76,9 +76,8 @@ class NintendoSwitch {
     return nintendoData;
   }
 
-  static async getNintendoGames(nextDays) {
+  static async getUpcomingGames(nextDays) {
     try {
-      console.log('hey');
       const metacriticURL =
         'https://www.metacritic.com/browse/games/release-date/coming-soon/switch/date';
       const response = await axios.get(metacriticURL);
